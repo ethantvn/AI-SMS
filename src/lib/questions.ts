@@ -181,9 +181,10 @@ export function getQuestion(id: string) {
 export function getSimilarQuestions(questionId: string, limit = 3) {
   const question = getQuestion(questionId);
   if (!question) return [];
+  const originalPrompt = normalizePrompt(question.questionText);
 
   return questions
-    .filter((candidate) => candidate.id !== question.id)
+    .filter((candidate) => candidate.id !== question.id && normalizePrompt(candidate.questionText) !== originalPrompt)
     .map((candidate) => {
       const score =
         (candidate.subtopic === question.subtopic ? 4 : 0) +
@@ -197,6 +198,10 @@ export function getSimilarQuestions(questionId: string, limit = 3) {
     .sort((a, b) => b.score - a.score || a.candidate.id.localeCompare(b.candidate.id))
     .slice(0, limit)
     .map((item) => item.candidate);
+}
+
+function normalizePrompt(prompt: string) {
+  return prompt.replace(/\s+\(Practice variant \d+\)$/i, "").trim().toLowerCase();
 }
 
 export function practiceQuestionLabel(question: Pick<Question, "id" | "section" | "subtopic" | "difficulty">) {

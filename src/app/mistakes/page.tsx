@@ -27,7 +27,7 @@ export default function MistakesPage() {
           const attempt = attempts.find((item) => item.id === mistake.attemptId);
           if (!question) return null;
           const similarQuestion = getSimilarQuestions(question.id, 1)[0];
-          const correctionHref = similarQuestion ? `/practice/${similarQuestion.id}` : `/practice/${question.id}`;
+          const correctionHref = similarQuestion ? `/practice/${similarQuestion.id}` : "/practice";
           return (
             <article key={mistake.id} className="rounded-lg border border-border bg-surface p-5">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -57,9 +57,9 @@ export default function MistakesPage() {
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <SecondaryLink href={correctionHref}>Correct this topic</SecondaryLink>
                 {similarQuestion ? (
-                  <p className="text-sm text-foreground/60">Next question: {practiceQuestionLabel(similarQuestion)}</p>
+                  <p className="text-sm text-foreground/60">Fresh question: {practiceQuestionLabel(similarQuestion)}</p>
                 ) : (
-                  <p className="text-sm text-foreground/60">No fresh variant available, so this reopens the original.</p>
+                  <p className="text-sm text-foreground/60">No fresh related question is available yet.</p>
                 )}
               </div>
             </article>
