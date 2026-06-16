@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { getCurrentSupabaseUserId, loadStudyStateRemote } from "./supabase-data";
+import { getQuestion } from "./questions";
 import {
+  buildTutorExplanation,
   readAttempts,
   readMistakes,
   readProfile,
@@ -35,9 +37,12 @@ export function useStudyStateSync() {
         const state = await loadStudyStateRemote(userId);
         if (!active) return;
 
+        const attempts = mergeById(state.attempts, readAttempts());
+        const mistakes = rebuildMissingMistakes(attempts, mergeById(state.mistakes, readMistakes()));
+
         writeProfile(state.profile ?? readProfile());
-        writeAttempts(mergeById(state.attempts, readAttempts()));
-        writeMistakes(mergeById(state.mistakes, readMistakes()));
+        writeAttempts(attempts);
+        writeMistakes(mistakes);
         setSyncStatus("remote");
       } catch {
         if (active) setSyncStatus("error");
@@ -65,4 +70,28 @@ function mergeById<T extends Attempt | Mistake>(remoteItems: T[], localItems: T[
   return [...merged.values()].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
+}
+
+function rebuildMissingMistakes(attempts: Attempt[], mistakes: Mistake[]) {
+  const existingAttemptIds = new Set(mistakes.map((mistake) => mistake.attemptId));
+  const rebuilt = [...mistakes];
+
+  for (const attempt of attempts) {
+    if (attempt.isCorrect || existingAttemptIds.has(attempt.id)) continue;
+
+    const question = getQuestion(attempt.questionId);
+    if (!question) continue;
+
+    rebuilt.push({
+      id: crypto.randomUUID(),
+      userId: attempt.userId,
+      questionId: attempt.questionId,
+      attemptId: attempt.id,
+      mistakeType: "concept gap",
+      aiExplanation: buildTutorExplanation(question, attempt.selectedAnswer),
+      createdAt: attempt.createdAt,
+    });
+  }
+
+  return rebuilt.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
