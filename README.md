@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MistakeLab ACT
 
-## Getting Started
+AI test prep built around student mistakes. This MVP focuses on ACT diagnostic testing, targeted practice, short AI explanations, a mistake journal, and adaptive dashboard recommendations.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- Supabase Auth and Postgres
+- OpenAI Responses API through `/api/explain`
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The app works without environment variables using local demo persistence. Supabase and OpenAI activate when the matching env vars are configured.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment
 
-## Learn More
+Create `.env.local` from `.env.example`:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-jwt
+SUPABASE_SECRET_KEY=your-server-only-secret-key
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-5.4-mini
+SEED_TOKEN=change-me-for-production
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Keep `SUPABASE_SECRET_KEY`, `OPENAI_API_KEY`, and `SEED_TOKEN` server-only.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Supabase Setup
 
-## Deploy on Vercel
+1. Open the Supabase SQL editor.
+2. Run [supabase/schema.sql](supabase/schema.sql).
+3. Start the dev server with `.env.local` configured.
+4. Seed questions from the app Settings page or with:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run seed:questions
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The seed command posts to `http://localhost:3000/api/seed-questions`. Set `SEED_BASE_URL` to target another deployment.
+
+## MVP Flow
+
+- `/signup` and `/login`: account flow through Supabase when configured, demo fallback otherwise.
+- `/onboarding`: saves ACT profile fields.
+- `/diagnostic`: records a 24-question baseline and returns weak-topic guidance.
+- `/practice`: filters questions by recommendation, topic, and difficulty.
+- `/practice/[questionId]`: records attempts, captures mistake type, and requests an AI explanation.
+- `/mistakes`: shows missed questions, selected/correct answers, topics, mistake types, explanations, and dates.
+- `/dashboard`: summarizes target score, estimated score, attempts, accuracy, weak topics, mistake patterns, and next practice.
+
+## Verification
+
+```bash
+npm run lint
+npm run build
+```
