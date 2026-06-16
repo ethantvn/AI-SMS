@@ -1,4 +1,10 @@
+"use client";
+
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { setCurrentUserId } from "@/lib/storage";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AuthStatus } from "./auth-status";
 
 const nav = [
@@ -11,6 +17,58 @@ const nav = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const supabase = getSupabaseBrowserClient();
+
+    if (!supabase) {
+      router.replace("/login");
+      return;
+    }
+    const client = supabase;
+
+    async function requireUser() {
+      const { data } = await client.auth.getUser();
+      if (!active) return;
+
+      if (!data.user) {
+        const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
+        router.replace(`/login${next}`);
+        return;
+      }
+
+      setCurrentUserId(data.user.id);
+      setAuthorized(true);
+    }
+
+    requireUser();
+
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      if (!session?.user) {
+        const next = pathname ? `?next=${encodeURIComponent(pathname)}` : "";
+        router.replace(`/login${next}`);
+        return;
+      }
+
+      setCurrentUserId(session.user.id);
+      setAuthorized(true);
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [pathname, router]);
+
+  if (!authorized) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-border bg-surface">

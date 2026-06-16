@@ -23,8 +23,7 @@ export default function SignupPage() {
     const supabase = getSupabaseBrowserClient();
 
     if (!supabase) {
-      setCurrentUserId("00000000-0000-4000-8000-000000000000");
-      router.push("/onboarding");
+      setError("Account creation is not configured yet. Add the Supabase environment variables first.");
       return;
     }
 

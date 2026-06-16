@@ -20,8 +20,7 @@ export default function LoginPage() {
     const supabase = getSupabaseBrowserClient();
 
     if (!supabase) {
-      setCurrentUserId("00000000-0000-4000-8000-000000000000");
-      router.push("/dashboard");
+      setError("Login is not configured yet. Add the Supabase environment variables first.");
       return;
     }
 
@@ -32,7 +31,8 @@ export default function LoginPage() {
     }
 
     if (data.user) setCurrentUserId(data.user.id);
-    router.push("/dashboard");
+    const nextPath = new URLSearchParams(window.location.search).get("next");
+    router.push(nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard");
   }
 
   return (
