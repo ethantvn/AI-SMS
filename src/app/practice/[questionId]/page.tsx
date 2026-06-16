@@ -1,18 +1,17 @@
 "use client";
 
 import { AppShell, PageHeader, PrimaryLink, SecondaryLink } from "@/components/app-shell";
-import { getQuestion, practiceQuestionLabel } from "@/lib/questions";
+import { getQuestion, getSimilarQuestions, practiceQuestionLabel } from "@/lib/questions";
 import { getCurrentSupabaseUserId, saveAttemptRemote } from "@/lib/supabase-data";
 import { buildTutorExplanation, readMistakes, saveAttempt, setCurrentUserId, updateMistakeExplanation } from "@/lib/storage";
 import type { Attempt, MistakeType, TutorExplanation } from "@/lib/types";
 import { notFound, useParams } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
-const mistakeTypes: MistakeType[] = ["concept gap", "careless mistake", "timing issue", "misread question", "guessed", "strategy issue"];
-
 export default function QuestionPage() {
   const params = useParams<{ questionId: string }>();
   const question = getQuestion(params.questionId);
+  const nextSimilarQuestion = question ? getSimilarQuestions(question.id, 1)[0] : null;
   const startedAt = useRef(0);
   const [result, setResult] = useState<{
     selected: Attempt["selectedAnswer"];
@@ -32,7 +31,7 @@ export default function QuestionPage() {
     if (!question) return;
     const form = new FormData(event.currentTarget);
     const selected = form.get("answer") as Attempt["selectedAnswer"];
-    const mistakeType = String(form.get("mistakeType") ?? "concept gap") as MistakeType;
+    const mistakeType = "concept gap" as MistakeType;
     const remoteUserId = await getCurrentSupabaseUserId();
     if (remoteUserId) setCurrentUserId(remoteUserId);
 
@@ -81,8 +80,16 @@ export default function QuestionPage() {
 
   return (
     <AppShell>
-      <PageHeader eyebrow={`${question.section} / ${question.difficulty}`} title={`${question.topic}: ${question.subtopic}`} />
+      <PageHeader
+        eyebrow="Correction practice"
+        title={`${question.topic}: ${question.subtopic}`}
+        description={`Work the weak topic first. This is a ${question.difficulty} ${question.section} question.`}
+      />
       <form onSubmit={submit} className="rounded-lg border border-border bg-surface p-5">
+        <div className="mb-4 rounded-md border border-border bg-background p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Topic to work on</p>
+          <p className="mt-1 font-semibold">{question.topic}: {question.subtopic}</p>
+        </div>
         <p className="text-xl font-medium leading-8">{question.questionText}</p>
         <div className="mt-5 grid gap-3">
           {Object.entries(question.choices).map(([letter, choice]) => (
@@ -92,31 +99,31 @@ export default function QuestionPage() {
             </label>
           ))}
         </div>
-        <label className="mt-5 block text-sm font-medium">
-          Mistake category if wrong
-          <select name="mistakeType" className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2" disabled={Boolean(result)}>
-            {mistakeTypes.map((type) => <option key={type}>{type}</option>)}
-          </select>
-        </label>
         {!result ? (
           <button className="mt-5 min-h-11 rounded-md bg-accent px-5 py-2.5 font-medium text-accent-foreground hover:bg-accent/90">
-            Submit answer
+            Check answer
           </button>
         ) : null}
       </form>
       {result ? (
         <section className="mt-6 rounded-lg border border-border bg-surface p-5">
           <p className={`text-lg font-semibold ${result.isCorrect ? "text-success" : "text-warn"}`}>
-            {result.isCorrect ? "Correct" : `Not quite. Correct answer: ${question.correctAnswer}`}
+            {result.isCorrect ? "Correct. That topic is getting stronger." : `Not quite. Correct answer: ${question.correctAnswer}`}
           </p>
+          {!result.isCorrect ? (
+            <div className="mt-3 rounded-md border border-border bg-background p-4">
+              <p className="text-sm font-medium">Focus topic</p>
+              <p className="mt-1 text-sm text-foreground/70">{question.topic}: {question.subtopic}</p>
+            </div>
+          ) : null}
           <pre className="mt-4 whitespace-pre-wrap rounded-md border border-border bg-background p-4 font-sans text-sm leading-6 text-foreground/75">
             {result.explanation}
           </pre>
-          {result.similarQuestionIds.length ? (
+          {result.similarQuestionIds.length || nextSimilarQuestion ? (
             <div className="mt-4 rounded-md border border-border bg-background p-4">
-              <h2 className="font-semibold">Similar practice</h2>
+              <h2 className="font-semibold">Keep correcting this topic</h2>
               <div className="mt-3 flex flex-wrap gap-2">
-                {result.similarQuestionIds.map((id) => {
+                {(result.similarQuestionIds.length ? result.similarQuestionIds : nextSimilarQuestion ? [nextSimilarQuestion.id] : []).map((id) => {
                   const similarQuestion = getQuestion(id);
                   if (!similarQuestion) return null;
                   return (
@@ -129,8 +136,8 @@ export default function QuestionPage() {
             </div>
           ) : null}
           <div className="mt-5 flex flex-wrap gap-3">
-            <SecondaryLink href="/practice">Back to practice</SecondaryLink>
-            <PrimaryLink href="/mistakes">Open mistake journal</PrimaryLink>
+            <PrimaryLink href="/mistakes">Back to correction queue</PrimaryLink>
+            <SecondaryLink href="/practice">Browse practice</SecondaryLink>
           </div>
         </section>
       ) : null}
