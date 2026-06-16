@@ -1,7 +1,7 @@
 "use client";
 
 import { AppShell, PageHeader, PrimaryLink, SecondaryLink } from "@/components/app-shell";
-import { getQuestion, getSimilarQuestions, practiceQuestionLabel } from "@/lib/questions";
+import { getQuestion } from "@/lib/questions";
 import { getCurrentSupabaseUserId, saveAttemptRemote } from "@/lib/supabase-data";
 import { buildTutorExplanation, readMistakes, saveAttempt, setCurrentUserId, updateMistakeExplanation } from "@/lib/storage";
 import type { Attempt, MistakeType, TutorExplanation } from "@/lib/types";
@@ -11,7 +11,6 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 export default function QuestionPage() {
   const params = useParams<{ questionId: string }>();
   const question = getQuestion(params.questionId);
-  const nextSimilarQuestion = question ? getSimilarQuestions(question.id, 1)[0] : null;
   const startedAt = useRef(0);
   const [result, setResult] = useState<{
     selected: Attempt["selectedAnswer"];
@@ -119,22 +118,6 @@ export default function QuestionPage() {
           <pre className="mt-4 whitespace-pre-wrap rounded-md border border-border bg-background p-4 font-sans text-sm leading-6 text-foreground/75">
             {result.explanation}
           </pre>
-          {result.similarQuestionIds.length || nextSimilarQuestion ? (
-            <div className="mt-4 rounded-md border border-border bg-background p-4">
-              <h2 className="font-semibold">Keep correcting this topic</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(result.similarQuestionIds.length ? result.similarQuestionIds : nextSimilarQuestion ? [nextSimilarQuestion.id] : []).map((id) => {
-                  const similarQuestion = getQuestion(id);
-                  if (!similarQuestion) return null;
-                  return (
-                    <SecondaryLink key={id} href={`/practice/${id}`}>
-                      {practiceQuestionLabel(similarQuestion)}
-                    </SecondaryLink>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
           <div className="mt-5 flex flex-wrap gap-3">
             <PrimaryLink href="/mistakes">Back to correction queue</PrimaryLink>
             <SecondaryLink href="/practice">Browse practice</SecondaryLink>
